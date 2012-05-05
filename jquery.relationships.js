@@ -1,5 +1,5 @@
 /* http://keith-wood.name/relationships.html
-   Relationships for jQuery v1.1.0.
+   Relationships for jQuery v1.1.1.
    Written by Keith Wood (kbwood@virginbroadband.com.au) January 2008.
    Dual licensed under the GPL (http://dev.jquery.com/browser/trunk/jquery/GPL-LICENSE.txt) and 
    MIT (http://dev.jquery.com/browser/trunk/jquery/MIT-LICENSE.txt) licenses. 
@@ -164,10 +164,12 @@ $.extend(RelationshipsInstance.prototype, {
 			// highlight matched items
 			var opacity = (this._get('opacity') || 20) / 100;
 			this._target.children('.relationships_set1').children().each(function() {
-				$(this).css('opacity', ($.inArray(this.id, highlightItems[0]) > -1 ? '1.0' : opacity));
+				$(this).css('opacity',
+					($.inArray(parseInt(this.id), highlightItems[0]) > -1 ? '1.0' : opacity));
 			});
 			this._target.children('.relationships_set2').children().each(function() {
-				$(this).css('opacity', ($.inArray(this.id, highlightItems[1]) > -1 ? '1.0' : opacity));
+				$(this).css('opacity',
+					($.inArray(parseInt(this.id), highlightItems[1]) > -1 ? '1.0' : opacity));
 			});
 		}
 		else {
