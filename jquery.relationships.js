@@ -1,5 +1,5 @@
 /* http://keith-wood.name/relationships.html
-   Relationships for jQuery v1.0.0.
+   Relationships for jQuery v1.1.0.
    Written by Keith Wood (kbwood@virginbroadband.com.au) January 2008.
    Dual licensed under the GPL (http://dev.jquery.com/browser/trunk/jquery/GPL-LICENSE.txt) and 
    MIT (http://dev.jquery.com/browser/trunk/jquery/MIT-LICENSE.txt) licenses. 
@@ -11,7 +11,7 @@
      items: ['Number one', 'Number two', 'Number three', 'Number four']};
    var intTypes = {images: 'intTypes.png', imageSize: [27, 27],
      items: ['Odd numbers', 'Even numbers', 'Prime numbers']};
-   var intLinks = [[0, 0], [0, 2], [1, 1], [1, 2], [2, 0], [2, 2], [3, 1]];
+   var intLinks = [[0, 0], [1, 1], [1, 2], [2, 0], [2, 2], [3, 1]];
    $('div selector').attachRelationships({set1: integers,
      set2: intTypes, links: intLinks, description: 'Integers'});
 */
@@ -57,7 +57,7 @@ $.extend(Relationships.prototype, {
 			return;
 		}
 		target.addClass(this.markerClassName);
-		target[0]._xlkId = inst._id;
+		target[0]._relId = inst._id;
 		inst._target = target;
 		this._updateRelationships(inst._id);
 	},
@@ -68,8 +68,17 @@ $.extend(Relationships.prototype, {
 		inst._target.html(inst._generateHTML());
 	},
 
+	/* Reconfigure the settings for a relationships div. */
+	_changeRelationships: function(target, settings) {
+		var inst = this._getInst(target._relId);
+		if (inst) {
+			extendRemove(inst._settings, settings || {});
+			this._updateRelationships(inst._id);
+		}
+	},
+
 	/* Remove the relationships widget from a div. */
-	_removeRelationships: function(target) {
+	_destroyRelationships: function(target) {
 		target = $(target);
 		if (!target.is('.' + this.markerClassName)) {
 			return;
@@ -77,7 +86,7 @@ $.extend(Relationships.prototype, {
 		target.removeClass(this.markerClassName);
 		target.empty();
 		this._inst[target[0]._cdnId] = null;
-		target[0]._xlkId = undefined;
+		target[0]._relId = undefined;
 	},
 	
 	/* Show the links for a selected item. */
@@ -109,8 +118,10 @@ $.extend(RelationshipsInstance.prototype, {
 		var set1 = this._get('set1');
 		var set2 = this._get('set2');
 		var description = this._get('description');
-		var html = '<div class="relationships_set1" style="height: ' + set1.imageSize[1] + 'px;">' + this._addSet(set1, 1) + '</div>' +
-			'<div class="relationships_set2" style="height: ' + set2.imageSize[1] + 'px;">' + this._addSet(set2, 2) + '</div>' +
+		var html = '<div class="relationships_set1" style="height: ' +
+			set1.imageSize[1] + 'px;">' + this._addSet(set1, 1) + '</div>' +
+			'<div class="relationships_set2" style="height: ' + set2.imageSize[1] +
+			'px;">' + this._addSet(set2, 2) + '</div>' +
 			'<div class="relationships_description">' + description + '</div>';
 		return html;
 	},
@@ -181,32 +192,19 @@ function extendRemove(target, props) {
 	return target;
 }
 
-/* Attach the relationships functionality to a jQuery selection.
-   @param  settings  object - the new settings to use for these relationships instances
+/* Attach the relationship functionality to a jQuery selection.
+   @param  command  string - the command to run (optional, default 'attach')
+   @param  options  object - the new settings to use for these relationships instances
    @return  jQuery object - for chaining further calls */
-$.fn.attachRelationships = function(settings) {
+$.fn.relationships = function(options) {
+	var otherArgs = Array.prototype.slice.call(arguments, 1);
 	return this.each(function() {
-		$.relationships._attachRelationships(this, new RelationshipsInstance(settings));
-	});
-};
-
-/* Remove the relationships functionality from a jQuery selection.
-   @return  jQuery object - for chaining further calls */
-$.fn.removeRelationships = function() {
-	return this.each(function() {
-		$.relationships._removeRelationships(this);
-	});
-};
-
-/* Reconfigure the settings for a relationships div.
-   @param  settings  object - the new settings
-   @return  jQuery object - for chaining further calls */
-$.fn.changeRelationships = function(settings) {
-	return this.each(function() {
-		var inst = $.relationships._getInst(this._xlkId);
-		if (inst) {
-			extendRemove(inst._settings, settings || {});
-			$.relationships._updateRelationships(inst._id);
+		if (typeof options == 'string') {
+			$.relationships['_' + options + 'Relationships'].
+				apply($.relationships, [this].concat(otherArgs));
+		}
+		else {
+			$.relationships._attachRelationships(this, new RelationshipsInstance(options));
 		}
 	});
 };
