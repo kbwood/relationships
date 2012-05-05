@@ -1,5 +1,5 @@
 /* http://keith-wood.name/relationships.html
-   Relationships for jQuery v1.1.1.
+   Relationships for jQuery v1.2.0.
    Written by Keith Wood (kbwood@virginbroadband.com.au) January 2008.
    Dual licensed under the GPL (http://dev.jquery.com/browser/trunk/jquery/GPL-LICENSE.txt) and 
    MIT (http://dev.jquery.com/browser/trunk/jquery/MIT-LICENSE.txt) licenses. 
@@ -20,60 +20,52 @@
 
 /* Relationships manager. */
 function Relationships() {
-	this._nextId = 0; // Next ID for a relationships instance
-	this._inst = []; // List of instances indexed by ID
 	this._defaults = {
 		opacity: 20 // Opacity of non-matching items, percentage
 	};
 }
 
+var PROP_NAME = 'relationships';
+
 $.extend(Relationships.prototype, {
 	/* Class name added to elements to indicate already configured with relationships. */
 	markerClassName: 'hasRelationships',
 	
-	/* Register a new relationships instance - with custom settings. */
-	_register: function(inst) {
-		var id = this._nextId++;
-		this._inst[id] = inst;
-		return id;
-	},
-
-	/* Retrieve a particular relationships instance based on its ID. */
-	_getInst: function(id) {
-		return this._inst[id] || id;
-	},
-
 	/* Override the default settings for all relationships instances.
-	   @param  settings  object - the new settings to use as defaults
+	   @param  options  object - the new settings to use as defaults
 	   @return void */
-	setDefaults: function(settings) {
-		extendRemove(this._defaults, settings || {});
+	setDefaults: function(options) {
+		extendRemove(this._defaults, options || {});
 	},
 
 	/* Attach the relationships widget to a div. */
-	_attachRelationships: function(target, inst) {
+	_attachRelationships: function(target, options) {
 		target = $(target);
 		if (target.is('.' + this.markerClassName)) {
 			return;
 		}
 		target.addClass(this.markerClassName);
-		target[0]._relId = inst._id;
-		inst._target = target;
-		this._updateRelationships(inst._id);
+		if (!target[0].id) {
+			target[0].id = 'rl' + new Date().getTime();
+		}
+		var inst = {};
+		inst.options = $.extend({}, options);
+		$.data(target[0], PROP_NAME, inst);
+		this._updateRelationships(target, inst);
 	},
 
 	/* Redisplay the relationships with an updated display. */
-	_updateRelationships: function(id) {
-		var inst = this._getInst(id);
-		inst._target.html(inst._generateHTML());
+	_updateRelationships: function(target, inst) {
+		target.html(this._generateHTML(target[0].id, inst));
 	},
 
 	/* Reconfigure the settings for a relationships div. */
-	_changeRelationships: function(target, settings) {
-		var inst = this._getInst(target._relId);
+	_changeRelationships: function(target, options) {
+		var inst = $.data(target, PROP_NAME);
 		if (inst) {
-			extendRemove(inst._settings, settings || {});
-			this._updateRelationships(inst._id);
+			extendRemove(inst.options, options || {});
+			$.data(target, PROP_NAME, inst);
+			this._updateRelationships($(target), inst);
 		}
 	},
 
@@ -83,103 +75,95 @@ $.extend(Relationships.prototype, {
 		if (!target.is('.' + this.markerClassName)) {
 			return;
 		}
-		target.removeClass(this.markerClassName);
-		target.empty();
-		this._inst[target[0]._cdnId] = null;
-		target[0]._relId = undefined;
+		target.removeClass(this.markerClassName).empty();
+		$.removeData(target[0], PROP_NAME);
 	},
 	
 	/* Show the links for a selected item. */
 	_showLinks: function(id, setId, itemId) {
-		var inst = this._getInst(id);
+		var target = $(id);
+		var inst = $.data(target[0], PROP_NAME);
 		if (inst) {
-			inst._showLinks(setId, itemId);
+			this._showLinks(target, inst, setId, itemId);
 		}
-	}
-});
+	},
 
-/* Individualised settings for relationships widgets applied to one or more divs.
-   Instances are managed and manipulated through the Relationships manager. */
-function RelationshipsInstance(settings) {
-	this._id = $.relationships._register(this);
-	this._target = null; // jQuery wrapper of target div
-	// Customise the relationships object - uses manager defaults if not overridden
-	this._settings = extendRemove({}, settings || {}); // clone
-}
-
-$.extend(RelationshipsInstance.prototype, {
 	/* Get a setting value, defaulting if necessary. */
-	_get: function(name) {
-		return (this._settings[name] != null ? this._settings[name] : $.relationships._defaults[name]);
+	_get: function(inst, name) {
+		return (inst.options[name] != null ?
+			inst.options[name] : $.relationships._defaults[name]);
 	},
 	
 	/* Generate the HTML to display the relationships widget. */
-	_generateHTML: function() {
-		var set1 = this._get('set1');
-		var set2 = this._get('set2');
-		var description = this._get('description');
+	_generateHTML: function(id, inst) {
+		var set1 = this._get(inst, 'set1');
+		var set2 = this._get(inst, 'set2');
+		var description = this._get(inst, 'description');
 		var html = '<div class="relationships_set1" style="height: ' +
-			set1.imageSize[1] + 'px;">' + this._addSet(set1, 1) + '</div>' +
+			set1.imageSize[1] + 'px;">' + this._addSet(id, set1, 1) + '</div>' +
 			'<div class="relationships_set2" style="height: ' + set2.imageSize[1] +
-			'px;">' + this._addSet(set2, 2) + '</div>' +
+			'px;">' + this._addSet(id, set2, 2) + '</div>' +
 			'<div class="relationships_description">' + description + '</div>';
 		return html;
 	},
 	
 	/* Display one of the sets. */
-	_addSet: function(set, setId) {
+	_addSet: function(id, set, setId) {
 		var html = '';
 		for (var i = 0; i < set.items.length; i++) {
 			var item = set.items[i];
 			html += '<span class="relationships_item" id="' + i + '" ' +
 				'style="width: ' + set.imageSize[0] + 'px; ' +
 				'height: ' + set.imageSize[1] + 'px; ' +
-				($.browser.mozilla ? ' padding-left: ' + set.imageSize[0] + 
+				($.browser.mozilla && $.browser.version.substr(0, 3) != '1.9' ?
+				' padding-left: ' + set.imageSize[0] + 
 				'px; padding-bottom: ' + (set.imageSize[1] - 18) + 'px;' : '') +
 				'background: transparent url(\'' + set.images + '\') ' +
 				'no-repeat -' + ((item.imageIndex || i) * set.imageSize[0]) + 'px 0px;" ' +
-				'onmouseover="jQuery.relationships._showLinks(' + this._id + ',' + setId + ',' + i + ')" ' +
-				'onmouseout="jQuery.relationships._showLinks(' + this._id + ')"></span>';
+				'onmouseover="jQuery.relationships._showLinks(\'#' + id + '\',' + setId + ',' + i + ')" ' +
+				'onmouseout="jQuery.relationships._showLinks(\'#' + id + '\')"></span>';
 		}
 		return html;
 	},
 	
 	/* Show the links for a selected item. */
-	_showLinks: function(setId, itemId) {
-		var description = this._get('description');
+	_showLinks: function(id, setId, itemId) {
+		var target = $(id);
+		var inst = $.data(target[0], PROP_NAME);
+		var description = this._get(inst, 'description');
 		if (setId) {
-			var set = this._get('set' + setId);
+			var set = this._get(inst, 'set' + setId);
 			// description for selected item
 			description = set.items[itemId].description || set.items[itemId];
 			// highlight only the selected item in this set
 			var highlightItems = [[], []];
 			highlightItems[setId - 1] = [itemId];
 			// determine matching items in other set
-			var links = this._get('links') || [];
+			var links = this._get(inst, 'links') || [];
 			for (var i = 0; i < links.length; i++) {
 				if (links[i][setId - 1] == itemId) {
 					highlightItems[2 - setId][highlightItems[2 - setId].length] = links[i][2 - setId];
 				}
 			}
 			// highlight matched items
-			var opacity = (this._get('opacity') || 20) / 100;
-			this._target.children('.relationships_set1').children().each(function() {
-				$(this).css('opacity',
-					($.inArray(parseInt(this.id), highlightItems[0]) > -1 ? '1.0' : opacity));
+			var opacity = (this._get(inst, 'opacity') || 20) / 100;
+			target.children('.relationships_set1').children().each(function() {
+				$(this).css('opacity', ($.inArray(
+					parseInt(this.id), highlightItems[0]) > -1 ? '1.0' : opacity));
 			});
-			this._target.children('.relationships_set2').children().each(function() {
-				$(this).css('opacity',
-					($.inArray(parseInt(this.id), highlightItems[1]) > -1 ? '1.0' : opacity));
+			target.children('.relationships_set2').children().each(function() {
+				$(this).css('opacity', ($.inArray(
+					parseInt(this.id), highlightItems[1]) > -1 ? '1.0' : opacity));
 			});
 		}
 		else {
 			// show all
-			this._target.children().children().each(function() {
+			target.find('span').each(function() {
 				$(this).css('opacity', '1.0');
 			});
 		}
 		// show selected item or default description
-		this._target.children('.relationships_description').text(description);
+		target.children('.relationships_description').text(description);
 	}
 });
 
@@ -206,7 +190,7 @@ $.fn.relationships = function(options) {
 				apply($.relationships, [this].concat(otherArgs));
 		}
 		else {
-			$.relationships._attachRelationships(this, new RelationshipsInstance(options));
+			$.relationships._attachRelationships(this, options);
 		}
 	});
 };
