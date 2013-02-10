@@ -1,8 +1,7 @@
 /* http://keith-wood.name/relationships.html
-   Relationships for jQuery v1.2.0.
-   Written by Keith Wood (kbwood@virginbroadband.com.au) January 2008.
-   Dual licensed under the GPL (http://dev.jquery.com/browser/trunk/jquery/GPL-LICENSE.txt) and 
-   MIT (http://dev.jquery.com/browser/trunk/jquery/MIT-LICENSE.txt) licenses. 
+   Relationships for jQuery v1.3.0.
+   Written by Keith Wood (kwood{at}iinet.com.au) January 2008.
+   Available under the MIT (https://github.com/jquery/jquery/blob/master/MIT-LICENSE.txt) license. 
    Please attribute the author if you use it. */
 
 /* Display matched items across two sets.
@@ -21,183 +20,193 @@
 /* Relationships manager. */
 function Relationships() {
 	this._defaults = {
-		opacity: 20 // Opacity of non-matching items, percentage
+		opacity: 20, // Opacity of non-matching items, percentage
+		set1: {}, // Details about the first set of icons
+		set2: {}, // Details about the second set of icons
+		links: [], // Links between the two sets based on indexes
+		description: '' // The description of the sets as a whole
 	};
 }
-
-var PROP_NAME = 'relationships';
 
 $.extend(Relationships.prototype, {
 	/* Class name added to elements to indicate already configured with relationships. */
 	markerClassName: 'hasRelationships',
-	
+	/* Name of the data property for instance settings. */
+	propertyName: 'relationships',
+
 	/* Override the default settings for all relationships instances.
-	   @param  options  object - the new settings to use as defaults
-	   @return void */
+	   @param  options  (object) the new settings to use as defaults
+	   @return  (Relationships) this object */
 	setDefaults: function(options) {
-		extendRemove(this._defaults, options || {});
+		$.extend(this._defaults, options || {});
+		return this;
 	},
 
-	/* Attach the relationships widget to a div. */
-	_attachRelationships: function(target, options) {
+	/* Attach the relationships widget to a div.
+	   @param  target   (element) the control to affect
+	   @param  options  (object) the custom options for this instance */
+	_attachPlugin: function(target, options) {
 		target = $(target);
-		if (target.is('.' + this.markerClassName)) {
+		if (target.hasClass(this.markerClassName)) {
 			return;
 		}
-		target.addClass(this.markerClassName);
-		if (!target[0].id) {
-			target[0].id = 'rl' + new Date().getTime();
-		}
-		var inst = {};
-		inst.options = $.extend({}, options);
-		$.data(target[0], PROP_NAME, inst);
-		this._updateRelationships(target, inst);
+		var inst = {options: $.extend({}, this._defaults)};
+		target.addClass(this.markerClassName).data(this.propertyName, inst);
+		this._optionPlugin(target, options);
 	},
 
-	/* Redisplay the relationships with an updated display. */
-	_updateRelationships: function(target, inst) {
-		target.html(this._generateHTML(target[0].id, inst));
-	},
-
-	/* Reconfigure the settings for a relationships div. */
-	_changeRelationships: function(target, options) {
-		var inst = $.data(target, PROP_NAME);
-		if (inst) {
-			extendRemove(inst.options, options || {});
-			$.data(target, PROP_NAME, inst);
-			this._updateRelationships($(target), inst);
-		}
-	},
-
-	/* Remove the relationships widget from a div. */
-	_destroyRelationships: function(target) {
+	/* Retrieve or reconfigure the settings for a control.
+	   @param  target   (element) the control to affect
+	   @param  options  (object) the new options for this instance or
+	                    (string) an individual property name
+	   @param  value    (any) the individual property value (omit if options
+	                    is an object or to retrieve the value of a setting)
+	   @return  (any) if retrieving a value */
+	_optionPlugin: function(target, options, value) {
 		target = $(target);
-		if (!target.is('.' + this.markerClassName)) {
+		var inst = target.data(this.propertyName);
+		if (!options || (typeof options == 'string' && value == null)) { // Get option
+			var name = options;
+			options = (inst || {}).options;
+			return (options && name ? options[name] : options);
+		}
+
+		if (!target.hasClass(this.markerClassName)) {
 			return;
 		}
-		target.removeClass(this.markerClassName).empty();
-		$.removeData(target[0], PROP_NAME);
-	},
-	
-	/* Show the links for a selected item. */
-	_showLinks: function(id, setId, itemId) {
-		var target = $(id);
-		var inst = $.data(target[0], PROP_NAME);
-		if (inst) {
-			this._showLinks(target, inst, setId, itemId);
+		options = options || {};
+		if (typeof options == 'string') {
+			var name = options;
+			options = {};
+			options[name] = value;
 		}
+		$.extend(inst.options, options);
+		target.html(this._generateHTML(inst));
 	},
 
-	/* Get a setting value, defaulting if necessary. */
-	_get: function(inst, name) {
-		return (inst.options[name] != null ?
-			inst.options[name] : $.relationships._defaults[name]);
+	/* Remove the plugin functionality from a control.
+	   @param  target  (element) the control to affect */
+	_destroyPlugin: function(target) {
+		target = $(target);
+		if (!target.hasClass(this.markerClassName)) {
+			return;
+		}
+		target.removeClass(this.markerClassName).
+			removeData(this.propertyName).empty();
 	},
 	
-	/* Generate the HTML to display the relationships widget. */
-	_generateHTML: function(id, inst) {
-		var set1 = this._get(inst, 'set1');
-		var set2 = this._get(inst, 'set2');
-		var description = this._get(inst, 'description');
-		var html = '<div class="relationships_set1" style="height: ' +
-			set1.imageSize[1] + 'px;">' + this._addSet(id, set1, 1) + '</div>' +
-			'<div class="relationships_set2" style="height: ' + set2.imageSize[1] +
-			'px;">' + this._addSet(id, set2, 2) + '</div>' +
-			'<div class="relationships_description">' + description + '</div>';
-		return html;
+	/* Generate the HTML to display the relationships widget.
+	   @param  inst  (object) the current instance settings
+	   @return  (jQuery) the widget content */
+	_generateHTML: function(inst) {
+		return this._addSet(inst, 1).add(this._addSet(inst, 2)).
+			add('<div class="' + this.propertyName + '_description">' +
+				inst.options.description + '</div>');
 	},
 	
-	/* Display one of the sets. */
-	_addSet: function(id, set, setId) {
-		var html = '';
+	/* Generate one of the sets.
+	   @param  inst   (object) the current instance settings
+	   @param  setId  (number) the set index
+	   @return  (jQuery) the corresponding elements */
+	_addSet: function(inst, setId) {
+		var set = inst.options['set' + setId];
+		var html = '<div class="' + this.propertyName + '_set' + setId + '" style="height: ' +
+			set.imageSize[1] + 'px;">';
 		for (var i = 0; i < set.items.length; i++) {
-			var item = set.items[i];
-			html += '<span class="relationships_item" id="' + i + '" ' +
-				'style="width: ' + set.imageSize[0] + 'px; ' +
-				'height: ' + set.imageSize[1] + 'px; ' +
-				($.browser.mozilla && $.browser.version.substr(0, 3) != '1.9' ?
-				' padding-left: ' + set.imageSize[0] + 
-				'px; padding-bottom: ' + (set.imageSize[1] - 18) + 'px;' : '') +
+			html += '<span class="' + this.propertyName + '_item" style="width: ' +
+				set.imageSize[0] + 'px; ' + 'height: ' + set.imageSize[1] + 'px; ' +
 				'background: transparent url(\'' + set.images + '\') ' +
-				'no-repeat -' + ((item.imageIndex || i) * set.imageSize[0]) + 'px 0px;" ' +
-				'onmouseover="jQuery.relationships._showLinks(\'#' + id + '\',' + setId + ',' + i + ')" ' +
-				'onmouseout="jQuery.relationships._showLinks(\'#' + id + '\')"></span>';
+				'no-repeat -' + ((set.items[i].imageIndex || i) * set.imageSize[0]) + 'px 0px;"></span>';
 		}
+		html = $(html + '</div>');
+		html.find('.' + this.propertyName + '_item').hover(function() {
+				plugin._showLinks(this, setId);
+			}, function() {
+				plugin._showLinks(this, 0);
+			});
 		return html;
 	},
 	
-	/* Show the links for a selected item. */
-	_showLinks: function(id, setId, itemId) {
-		var target = $(id);
-		var inst = $.data(target[0], PROP_NAME);
-		var description = this._get(inst, 'description');
+	/* Show the links for a selected item.
+	   @param  target  (element) the selected item
+	   @param  setId   (number) the set to which it belongs */
+	_showLinks: function(target, setId) {
+		target = $(target);
+		var itemId = target.index();
+		var container = target.closest('.' + plugin.markerClassName);
+		var inst = container.data(plugin.propertyName);
+		var description = inst.options.description;
 		if (setId) {
-			var set = this._get(inst, 'set' + setId);
-			// description for selected item
+			var set = inst.options['set' + setId];
+			// Description for selected item
 			description = set.items[itemId].description || set.items[itemId];
-			// highlight only the selected item in this set
+			// Highlight only the selected item in this set
 			var highlightItems = [[], []];
 			highlightItems[setId - 1] = [itemId];
-			// determine matching items in other set
-			var links = this._get(inst, 'links') || [];
+			// Determine matching items in other set
+			var links = inst.options.links || [];
 			for (var i = 0; i < links.length; i++) {
 				if (links[i][setId - 1] == itemId) {
 					highlightItems[2 - setId][highlightItems[2 - setId].length] = links[i][2 - setId];
 				}
 			}
-			// highlight matched items
-			var opacity = (this._get(inst, 'opacity') || 20) / 100;
-			target.children('.relationships_set1').children().each(function() {
-				$(this).css('opacity', ($.inArray(
-					parseInt(this.id), highlightItems[0]) > -1 ? '1.0' : opacity));
+			// Highlight matched items
+			var opacity = (inst.options.opacity || 20) / 100;
+			container.find('.' + plugin.propertyName + '_set1 span').css('opacity', function(i, value) {
+				return ($.inArray(i, highlightItems[0]) > -1 ? '1.0' : opacity);
 			});
-			target.children('.relationships_set2').children().each(function() {
-				$(this).css('opacity', ($.inArray(
-					parseInt(this.id), highlightItems[1]) > -1 ? '1.0' : opacity));
+			container.find('.' + plugin.propertyName + '_set2 span').css('opacity', function(i, value) {
+				return ($.inArray(i, highlightItems[1]) > -1 ? '1.0' : opacity);
 			});
 		}
 		else {
-			// show all
-			target.find('span').each(function() {
-				$(this).css('opacity', '1.0');
-			});
+			// Show all
+			container.find('span').css('opacity', '1.0');
 		}
-		// show selected item or default description
-		target.children('.relationships_description').text(description);
+		// Show selected item or default description
+		container.find('.' + plugin.propertyName + '_description').text(description);
 	}
 });
 
-/* jQuery extend now ignores nulls! */
-function extendRemove(target, props) {
-	$.extend(target, props);
-	for (var name in props) {
-		if (props[name] == null) {
-			target[name] = null;
-		}
+// The list of commands that return values and don't permit chaining
+var getters = [''];
+
+/* Determine whether a command is a getter and doesn't permit chaining.
+   @param  command    (string, optional) the command to run
+   @param  otherArgs  ([], optional) any other arguments for the command
+   @return  true if the command is a getter, false if not */
+function isNotChained(command, otherArgs) {
+	if (command == 'option' && (otherArgs.length == 0 ||
+			(otherArgs.length == 1 && typeof otherArgs[0] == 'string'))) {
+		return true;
 	}
-	return target;
+	return $.inArray(command, getters) > -1;
 }
 
 /* Attach the relationship functionality to a jQuery selection.
-   @param  command  string - the command to run (optional, default 'attach')
-   @param  options  object - the new settings to use for these relationships instances
-   @return  jQuery object - for chaining further calls */
+   @param  options  (object) the new settings to use for these instances (optional) or
+                    (string) the command to run (optional)
+   @return  (jQuery) for chaining further calls or
+            (any) getter value */
 $.fn.relationships = function(options) {
 	var otherArgs = Array.prototype.slice.call(arguments, 1);
+	if (isNotChained(options, otherArgs)) {
+		return plugin['_' + options + 'Plugin'].apply(plugin, [this[0]].concat(otherArgs));
+	}
 	return this.each(function() {
 		if (typeof options == 'string') {
-			$.relationships['_' + options + 'Relationships'].
-				apply($.relationships, [this].concat(otherArgs));
+			if (!plugin['_' + options + 'Plugin']) {
+				throw 'Unknown command: ' + options;
+			}
+			plugin['_' + options + 'Plugin'].apply(plugin, [this].concat(otherArgs));
 		}
 		else {
-			$.relationships._attachRelationships(this, options);
+			plugin._attachPlugin(this, options || {});
 		}
 	});
 };
 
 /* Initialise the relationships functionality. */
-$(document).ready(function() {
-   $.relationships = new Relationships(); // singleton instance
-});
+var plugin = $.relationships = new Relationships(); // Singleton instance
 
 })(jQuery);

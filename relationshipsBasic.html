@@ -1,0 +1,35 @@
+﻿<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html;charset=utf-8">
+<title>jQuery Relationships Basics</title>
+<link rel="stylesheet" type="text/css" href="jquery.relationships.css">
+<style type="text/css">
+body > iframe { display: none; }
+
+.relationships { width: 200px; background-color: #eee; border: 1px solid #ccc; }
+</style>
+<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.8.3/jquery.min.js"></script>
+<script type="text/javascript" src="jquery.relationships.js"></script>
+<script type="text/javascript">
+$(function() {
+	var integers = {images: 'integers.png', imageSize: [25, 29],
+		items: ['Number one', 'Number two', 'Number three', 'Number four']};
+	var intTypes = {images: 'intTypes.png', imageSize: [27, 27],
+		items: ['Odd numbers', 'Even numbers', 'Prime numbers']};
+	var intLinks = [[0, 0], [1, 1], [1, 2], [2, 0], [2, 2], [3, 1]];
+	$('#integerRelationships').relationships({set1: integers,
+		set2: intTypes, links: intLinks, description: 'Integers'});
+});
+</script>
+</head>
+<body>
+<h1>jQuery Relationships Basics</h1>
+<p>This page demonstrates the very basics of the
+	<a href="http://keith-wood.name/relationships.html">jQuery Relationships plugin</a>.
+	It contains the minimum requirements for using the plugin and
+	can be used as the basis for your own experimentation. For more detail see the
+	<a href="http://keith-wood.name/relationshipsRef.html">documentation reference</a> page.</p>
+<div id="integerRelationships" class="relationships"></div>
+</body>
+</html>
