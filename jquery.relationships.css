@@ -1,8 +1,8 @@
-/* Relationships styles */
-.relationships_set1, .relationships_set2, .relationships_description {
+/* Relationships styles v2.0.0 */
+.relationships-set1, .relationships-set2, .relationships-description {
 	clear: both;
 	text-align: center;
 }
-.relationships_set1 span, .relationships_set2 span {
+.relationships-set1 span, .relationships-set2 span {
 	display: inline-block;
 }

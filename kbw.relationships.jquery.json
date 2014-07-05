@@ -7,7 +7,7 @@
 		"relationships",
 		"ui"
 	],
-	"version": "1.3.0",
+	"version": "2.0.0",
 	"author": {
 		"name": "Keith Wood",
 		"url": "http://keith-wood.name/"
@@ -30,6 +30,6 @@
 	"docs": "http://keith-wood.name/relationshipsRef.html",
 	"download": "http://keith-wood.name/relationships.html",
 	"dependencies": {
-		"jquery": ">=1.4"
+		"jquery": ">=1.7"
 	}
 }
